@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="card shadow-lg">
+        <div class="card-header {% if prediction_type == 'disease' %}bg-primary{% else %}bg-success{% endif %} text-white">
+            <h3>
+                <i class="fas fa-{% if prediction_type == 'disease' %}diagnoses{% else %}vial{% endif %} me-2"></i>
+                Prediction Results
+            </h3>
+        </div>
+        
+        <div class="card-body">
+            {% if prediction_type == 'disease' %}
+                <div class="alert alert-info">
+                    <h4 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Based on your selected symptoms:
+                    </h4>
+                    <ul>
+                        {% for symptom in selected_symptoms %}
+                        <li>{{ symptom.replace('_', ' ').title() }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                <h4 class="mt-4 mb-3">Top Predictions:</h4>
+                <div class="row">
+                    {% for prediction in predictions %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100 border-{% if loop.index == 1 %}primary{% elif loop.index == 2 %}info{% else %}warning{% endif %}">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ prediction.name }}</h5>
+                                <div class="progress mt-3 mb-2" style="height: 25px;">
+                                    <div class="progress-bar bg-{% if loop.index == 1 %}primary{% elif loop.index == 2 %}info{% else %}warning{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ prediction.confidence * 100 }}%" 
+                                         aria-valuenow="{{ prediction.confidence * 100 }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ prediction.confidence_percent }}
+                                    </div>
+                                </div>
+                                <p class="card-text mt-2">
+                                    Confidence: {{ prediction.confidence_percent }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6 mb-4">
+                        <div id="confidence-chart"></div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div id="symptoms-chart"></div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div id="network-chart" style="height: 500px;"></div>
+                    </div>
+                </div>
+                
+            {% elif prediction_type == 'diabetes' %}
+                <div class="text-center mb-5">
+                    <div id="gauge-chart" style="height: 300px;"></div>
+                </div>
+                
+                {% if prediction == 1 %}
+                <div class="alert alert-danger text-center">
+                    <h4><i class="fas fa-exclamation-triangle me-2"></i> High Diabetes Risk Detected!</h4>
+                    <p class="mb-0">Your risk probability is <strong>{{ "%.1f"|format(probability * 100) }}%</strong>. Please consult a healthcare professional.</p>
+                </div>
+                {% else %}
+                <div class="alert alert-success text-center">
+                    <h4><i class="fas fa-check-circle me-2"></i> Low Diabetes Risk</h4>
+                    <p class="mb-0">Your risk probability is <strong>{{ "%.1f"|format(probability * 100) }}%</strong>. Maintain healthy habits!</p>
+                </div>
+                {% endif %}
+                
+                <h4 class="mt-5 mb-3">Your Input Values:</h4>
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div id="features-chart"></div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <div class="text-center mt-5">
+                <a href="/" class="btn btn-{% if prediction_type == 'disease' %}primary{% else %}success{% endif %} btn-lg">
+                    <i class="fas fa-home me-2"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Render all plots
+    {% if prediction_type == 'disease' %}
+        Plotly.newPlot('confidence-chart', {{ plots.confidence|safe }});
+        Plotly.newPlot('symptoms-chart', {{ plots.symptoms|safe }});
+        Plotly.newPlot('network-chart', {{ plots.symptom_network|safe }});
+    {% else %}
+        Plotly.newPlot('gauge-chart', {{ plots.gauge|safe }});
+        Plotly.newPlot('features-chart', {{ plots.feature_importance|safe }});
+    {% endif %}
+</script>
+{% endblock %}

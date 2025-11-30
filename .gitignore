@@ -1,0 +1,27 @@
+# Ignore large ML model files
+models/*.joblib
+models/*.pkl
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore virtual env
+venv/
+.env/
+
+# Ignore datasets
+*.csv
+*.xlsx
+dataset/
+data/
+
+# Ignore logs
+*.log
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Ignore temporary files
+*.tmp
+*.bak

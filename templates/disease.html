@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Disease Prediction{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2 class="mb-4">Disease Prediction</h2>
+        <p>Select all symptoms you're experiencing:</p>
+        
+        <form method="POST" action="/disease">
+            <div class="mb-3">
+                <div class="row">
+                    {% for symptom in symptoms %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="symptoms" id="symptom{{ loop.index }}" value="{{ symptom }}">
+                            <label class="form-check-label" for="symptom{{ loop.index }}">
+                                {{ symptom }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Predict Disease</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
