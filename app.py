@@ -50,7 +50,6 @@ def load_models():
         }
     }
 
-# Lazy loading to avoid Render memory crash
 models = None
 
 @app.route('/')
@@ -76,13 +75,10 @@ def home():
 @app.route('/predict/disease', methods=['POST'])
 def predict_disease():
 
-<<<<<<< HEAD
-=======
     global models
     if models is None:
         models = load_models()
 
->>>>>>> ce2ac15 (lazy load models to fix memory crash)
     selected_symptoms = request.form.getlist('symptoms')
 
     mlb = models['disease']['mlb']
@@ -207,7 +203,6 @@ def create_symptom_importance_plot(selected_symptoms):
 def create_symptom_network_plot(selected_symptoms,predictions):
 
     nodes=[]
-    node_labels=[]
 
     for symptom in selected_symptoms:
         nodes.append(dict(
@@ -267,11 +262,8 @@ def create_diabetes_gauge(probability):
         }
     ))
 
-<<<<<<< HEAD
     fig.update_layout(height=300)
 
-=======
->>>>>>> ce2ac15 (lazy load models to fix memory crash)
     return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 def create_feature_importance_plot(input_data):
@@ -286,16 +278,9 @@ def create_feature_importance_plot(input_data):
         title='Input Feature Values'
     )
 
-<<<<<<< HEAD
     fig.update_layout(height=300)
 
     return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0",port=5000,debug=True)
-=======
-    return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
-
-if __name__ == '__main__':
     app.run(host="0.0.0.0",port=5000)
->>>>>>> ce2ac15 (lazy load models to fix memory crash)
