@@ -27,7 +27,7 @@ def download_models():
 
         if not os.path.exists(path):
             print(f"Downloading {filename}...")
-            gdown.download(url, path, quiet=False)
+            gdown.download(url, path, quiet=False,fuzzy=True)
 
 def load_models():
     download_models()
