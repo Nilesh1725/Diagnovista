@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 import json
 import os
 import gdown
-import onnxruntime as ort
 from sklearn.preprocessing import StandardScaler, MultiLabelBinarizer
 
 app = Flask(__name__)
@@ -16,7 +15,7 @@ MODEL_DIR = "models"
 
 FILES = {
     "diagnovista_model.joblib": "https://drive.google.com/uc?id=1EgHMOs294ixjtc1IxEkBG2sy8yV2JUEX",
-    "diabetes_model_quant.onnx": "https://drive.google.com/uc?id=1KGznrLyFUXNGktAkj-ozKuxMvrIfHKdn",
+    "diabetes_model.joblib": "https://drive.google.com/uc?id=1KGznrLyFUXNGktAkj-ozKuxMvrIfHKdn",
     "diabetes_scaler.joblib": "https://drive.google.com/uc?id=1r0Cd8Px15SHl0OxfemOgY2NK5EthZWRK"
 }
 
@@ -34,12 +33,8 @@ def load_models():
     download_models()
 
     disease_components = joblib.load('models/diagnovista_model.joblib')
+    diabetes_model = joblib.load('models/diabetes_model.joblib')
     diabetes_scaler = joblib.load('models/diabetes_scaler.joblib')
-
-    diabetes_session = ort.InferenceSession(
-        'models/diabetes_model_quant.onnx',
-        providers=["CPUExecutionProvider"]
-    )
 
     return {
         'disease': {
@@ -49,9 +44,9 @@ def load_models():
             'symptom_weights': disease_components['symptom_weights']
         },
         'diabetes': {
-            'session': diabetes_session,
+            'model': diabetes_model,
             'scaler': diabetes_scaler,
-            'feature_names': ['HighBP', 'BMI', 'GenHlth', 'PhysHlth', 'MentHlth', 'Age', 'Education', 'Income']
+            'feature_names': ['HighBP','BMI','GenHlth','PhysHlth','MentHlth','Age','Education','Income']
         }
     }
 
@@ -60,6 +55,7 @@ models = load_models()
 @app.route('/')
 def home():
     symptoms_grouped = {}
+
     for symptom in sorted(models['disease']['mlb'].classes_):
         first_letter = symptom[0].upper()
         if first_letter not in symptoms_grouped:
@@ -74,6 +70,7 @@ def home():
 
 @app.route('/predict/disease', methods=['POST'])
 def predict_disease():
+
     selected_symptoms = request.form.getlist('symptoms')
 
     mlb = models['disease']['mlb']
@@ -82,7 +79,7 @@ def predict_disease():
     for symptom in selected_symptoms:
         if symptom in mlb.classes_:
             idx = list(mlb.classes_).index(symptom)
-            input_data[idx] = models['disease']['symptom_weights'].get(symptom, 1)
+            input_data[idx] = models['disease']['symptom_weights'].get(symptom,1)
 
     probas = models['disease']['model'].predict_proba([input_data])[0]
     top_indices = np.argsort(probas)[-3:][::-1]
@@ -96,7 +93,7 @@ def predict_disease():
     plots = {
         'confidence': create_disease_confidence_plot(predictions),
         'symptoms': create_symptom_importance_plot(selected_symptoms),
-        'symptom_network': create_symptom_network_plot(selected_symptoms, predictions)
+        'symptom_network': create_symptom_network_plot(selected_symptoms,predictions)
     }
 
     return render_template(
@@ -119,17 +116,14 @@ def predict_diabetes():
         float(request.form['Age']),
         float(request.form['Education']),
         float(request.form['Income'])
-    ]).reshape(1, -1)
+    ]).reshape(1,-1)
 
     scaled_data = models['diabetes']['scaler'].transform(input_data)
 
-    session = models['diabetes']['session']
-    input_name = session.get_inputs()[0].name
+    model = models['diabetes']['model']
 
-    result = session.run(None, {input_name: scaled_data.astype("float32")})
-
-    prediction = int(result[0][0])
-    probability = float(result[1][0][1])
+    prediction = int(model.predict(scaled_data)[0])
+    probability = float(model.predict_proba(scaled_data)[0][1])
 
     plots = {
         'gauge': create_diabetes_gauge(probability),
@@ -156,7 +150,7 @@ def create_disease_confidence_plot(predictions):
         title='<b>Disease Prediction Confidence</b>',
         color=[p['confidence'] for p in predictions],
         color_continuous_scale='Tealrose',
-        labels={'x': 'Confidence (%)', 'y': ''}
+        labels={'x':'Confidence (%)','y':''}
     )
 
     fig.update_layout(
@@ -167,14 +161,14 @@ def create_disease_confidence_plot(predictions):
         height=300
     )
 
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 def create_symptom_importance_plot(selected_symptoms):
 
-    symptoms = [s.replace('_',' ').title() for s in selected_symptoms]
-    importance = [models['disease']['symptom_weights'].get(s,1) for s in selected_symptoms]
+    symptoms=[s.replace('_',' ').title() for s in selected_symptoms]
+    importance=[models['disease']['symptom_weights'].get(s,1) for s in selected_symptoms]
 
-    fig = px.bar(
+    fig=px.bar(
         x=importance,
         y=symptoms,
         orientation='h',
@@ -192,9 +186,9 @@ def create_symptom_importance_plot(selected_symptoms):
         coloraxis_showscale=False
     )
 
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
-def create_symptom_network_plot(selected_symptoms, predictions):
+def create_symptom_network_plot(selected_symptoms,predictions):
 
     nodes=[]
     node_labels=[]
@@ -203,7 +197,7 @@ def create_symptom_network_plot(selected_symptoms, predictions):
         nodes.append(dict(
             x=np.random.uniform(0,0.5),
             y=np.random.uniform(0,1),
-            size=10 + models['disease']['symptom_weights'].get(symptom,1)*5,
+            size=10+models['disease']['symptom_weights'].get(symptom,1)*5,
             label=symptom.replace('_',' ').title(),
             color='#636EFA'
         ))
@@ -213,7 +207,7 @@ def create_symptom_network_plot(selected_symptoms, predictions):
         nodes.append(dict(
             x=np.random.uniform(0.5,1),
             y=np.random.uniform(0,1),
-            size=15 + pred['confidence']*30,
+            size=15+pred['confidence']*30,
             label=pred['name'],
             color='#EF553B'
         ))
@@ -270,7 +264,7 @@ def create_symptom_network_plot(selected_symptoms, predictions):
         height=400
     )
 
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 def create_diabetes_gauge(probability):
 
@@ -298,7 +292,7 @@ def create_diabetes_gauge(probability):
 
     fig.update_layout(height=300)
 
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 def create_feature_importance_plot(input_data):
 
@@ -316,7 +310,7 @@ def create_feature_importance_plot(input_data):
 
     fig.update_layout(height=300)
 
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0",port=5000,debug=True)
