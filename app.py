@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import json
 import os
 import gdown
+import onnxruntime as ort
 from sklearn.preprocessing import StandardScaler, MultiLabelBinarizer
 
 app = Flask(__name__)
@@ -15,7 +16,7 @@ MODEL_DIR = "models"
 
 FILES = {
     "diagnovista_model.joblib": "https://drive.google.com/uc?id=1EgHMOs294ixjtc1IxEkBG2sy8yV2JUEX",
-    "diabetes_model.joblib": "https://drive.google.com/uc?id=1LQj0Rukh1j7tvKU8iZ9YuqOj7ZqFx147",
+    "diabetes_model.onnx": "https://drive.google.com/uc?id=1zZIgjzvuQkgLdK_oDKOq6paK1afnXfU4",
     "diabetes_scaler.joblib": "https://drive.google.com/uc?id=1r0Cd8Px15SHl0OxfemOgY2NK5EthZWRK"
 }
 
@@ -27,14 +28,15 @@ def download_models():
 
         if not os.path.exists(path):
             print(f"Downloading {filename}...")
-            gdown.download(url, path, quiet=False,fuzzy=True)
+            gdown.download(url, path, quiet=False, fuzzy=True)
 
 def load_models():
     download_models()
 
     disease_components = joblib.load('models/diagnovista_model.joblib')
-    diabetes_model = joblib.load('models/diabetes_model.joblib')
     diabetes_scaler = joblib.load('models/diabetes_scaler.joblib')
+
+    diabetes_session = ort.InferenceSession('models/diabetes_model.onnx')
 
     return {
         'disease': {
@@ -44,7 +46,7 @@ def load_models():
             'symptom_weights': disease_components['symptom_weights']
         },
         'diabetes': {
-            'model': diabetes_model,
+            'session': diabetes_session,
             'scaler': diabetes_scaler,
             'feature_names': ['HighBP', 'BMI', 'GenHlth', 'PhysHlth', 'MentHlth', 'Age', 'Education', 'Income']
         }
@@ -117,8 +119,14 @@ def predict_diabetes():
     ]).reshape(1, -1)
 
     scaled_data = models['diabetes']['scaler'].transform(input_data)
-    prediction = models['diabetes']['model'].predict(scaled_data)[0]
-    probability = models['diabetes']['model'].predict_proba(scaled_data)[0][1]
+
+    session = models['diabetes']['session']
+    input_name = session.get_inputs()[0].name
+
+    result = session.run(None, {input_name: scaled_data.astype("float32")})
+
+    prediction = int(result[0][0])
+    probability = float(result[1][0][1])
 
     plots = {
         'gauge': create_diabetes_gauge(probability),
