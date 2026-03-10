@@ -16,7 +16,7 @@ MODEL_DIR = "models"
 
 FILES = {
     "diagnovista_model.joblib": "https://drive.google.com/uc?id=1EgHMOs294ixjtc1IxEkBG2sy8yV2JUEX",
-    "diabetes_model.onnx": "https://drive.google.com/uc?id=1zZIgjzvuQkgLdK_oDKOq6paK1afnXfU4",
+    "diabetes_model_quant.onnx": "https://drive.google.com/uc?id=1KGznrLyFUXNGktAkj-ozKuxMvrIfHKdn",
     "diabetes_scaler.joblib": "https://drive.google.com/uc?id=1r0Cd8Px15SHl0OxfemOgY2NK5EthZWRK"
 }
 
@@ -36,7 +36,10 @@ def load_models():
     disease_components = joblib.load('models/diagnovista_model.joblib')
     diabetes_scaler = joblib.load('models/diabetes_scaler.joblib')
 
-    diabetes_session = ort.InferenceSession('models/diabetes_model.onnx')
+    diabetes_session = ort.InferenceSession(
+        'models/diabetes_model_quant.onnx',
+        providers=["CPUExecutionProvider"]
+    )
 
     return {
         'disease': {
