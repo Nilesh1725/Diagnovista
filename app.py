@@ -50,10 +50,15 @@ def load_models():
         }
     }
 
-models = load_models()
+# Lazy loading to avoid Render memory crash
+models = None
 
 @app.route('/')
 def home():
+    global models
+    if models is None:
+        models = load_models()
+
     symptoms_grouped = {}
 
     for symptom in sorted(models['disease']['mlb'].classes_):
@@ -71,6 +76,13 @@ def home():
 @app.route('/predict/disease', methods=['POST'])
 def predict_disease():
 
+<<<<<<< HEAD
+=======
+    global models
+    if models is None:
+        models = load_models()
+
+>>>>>>> ce2ac15 (lazy load models to fix memory crash)
     selected_symptoms = request.form.getlist('symptoms')
 
     mlb = models['disease']['mlb']
@@ -106,6 +118,10 @@ def predict_disease():
 
 @app.route('/predict/diabetes', methods=['POST'])
 def predict_diabetes():
+
+    global models
+    if models is None:
+        models = load_models()
 
     input_data = np.array([
         float(request.form['HighBP']),
@@ -201,7 +217,6 @@ def create_symptom_network_plot(selected_symptoms,predictions):
             label=symptom.replace('_',' ').title(),
             color='#636EFA'
         ))
-        node_labels.append(symptom.replace('_',' ').title())
 
     for pred in predictions:
         nodes.append(dict(
@@ -211,46 +226,17 @@ def create_symptom_network_plot(selected_symptoms,predictions):
             label=pred['name'],
             color='#EF553B'
         ))
-        node_labels.append(pred['name'])
-
-    edges=[]
-
-    for i,symptom in enumerate(selected_symptoms):
-        for j,pred in enumerate(predictions):
-            edges.append(dict(
-                x0=nodes[i]['x'],
-                y0=nodes[i]['y'],
-                x1=nodes[len(selected_symptoms)+j]['x'],
-                y1=nodes[len(selected_symptoms)+j]['y'],
-                width=2
-            ))
 
     fig=go.Figure()
-
-    for edge in edges:
-        fig.add_trace(go.Scatter(
-            x=[edge['x0'],edge['x1'],None],
-            y=[edge['y0'],edge['y1'],None],
-            mode='lines',
-            line=dict(width=edge['width'],color='#AAAAAA'),
-            hoverinfo='none',
-            showlegend=False
-        ))
 
     for node in nodes:
         fig.add_trace(go.Scatter(
             x=[node['x']],
             y=[node['y']],
             mode='markers+text',
-            marker=dict(
-                size=node['size'],
-                color=node['color'],
-                opacity=0.8,
-                line=dict(width=2,color='DarkSlateGrey')
-            ),
+            marker=dict(size=node['size'],color=node['color']),
             text=node['label'],
             textposition="top center",
-            hoverinfo='text',
             showlegend=False
         ))
 
@@ -260,7 +246,6 @@ def create_symptom_network_plot(selected_symptoms,predictions):
         paper_bgcolor='rgba(0,0,0,0)',
         xaxis=dict(showgrid=False,zeroline=False,showticklabels=False),
         yaxis=dict(showgrid=False,zeroline=False,showticklabels=False),
-        margin=dict(l=20,r=20,t=40,b=20),
         height=400
     )
 
@@ -269,29 +254,24 @@ def create_symptom_network_plot(selected_symptoms,predictions):
 def create_diabetes_gauge(probability):
 
     fig=go.Figure(go.Indicator(
-        mode="gauge+number+delta",
+        mode="gauge+number",
         value=probability*100,
-        domain={'x':[0,1],'y':[0,1]},
-        title={'text':"<b>Diabetes Risk Probability</b>"},
-        delta={'reference':50,'increasing':{'color':"red"}},
+        title={'text':"Diabetes Risk Probability"},
         gauge={
             'axis':{'range':[None,100]},
-            'bar':{'color':"darkblue"},
             'steps':[
                 {'range':[0,30],'color':'green'},
                 {'range':[30,70],'color':'yellow'},
                 {'range':[70,100],'color':'red'}
-            ],
-            'threshold':{
-                'line':{'color':"black",'width':4},
-                'thickness':0.75,
-                'value':probability*100
-            }
+            ]
         }
     ))
 
+<<<<<<< HEAD
     fig.update_layout(height=300)
 
+=======
+>>>>>>> ce2ac15 (lazy load models to fix memory crash)
     return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 def create_feature_importance_plot(input_data):
@@ -303,14 +283,19 @@ def create_feature_importance_plot(input_data):
         x=values,
         y=features,
         orientation='h',
-        title='<b>Input Feature Values</b>',
-        color=values,
-        color_continuous_scale='Blugrn'
+        title='Input Feature Values'
     )
 
+<<<<<<< HEAD
     fig.update_layout(height=300)
 
     return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0",port=5000,debug=True)
+=======
+    return json.dumps(fig,cls=plotly.utils.PlotlyJSONEncoder)
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0",port=5000)
+>>>>>>> ce2ac15 (lazy load models to fix memory crash)
